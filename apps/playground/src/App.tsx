@@ -45,6 +45,7 @@ export function App() {
   // Natural aspect ratio of the current source; the frame follows the image.
   const [sourceRatio, setSourceRatio] = useState(16 / 10)
   const [textMode, setTextMode] = useState(false)
+  const [scrollDemo, setScrollDemo] = useState(false)
   const [customText, setCustomText] = useState("DOTMATTER")
   const controlsRef = useRef<DotMatterControls | null>(null)
   const selected = effectCatalog.find((entry) => entry.id === effectId)!
@@ -219,6 +220,21 @@ export function App() {
               </button>
             ))}
           </nav>
+          <button
+            type="button"
+            className={scrollDemo ? "ambient-option is-active" : "ambient-option"}
+            onClick={() => {
+              setScrollDemo((current) => !current)
+              if (!scrollDemo) {
+                // Jump to the demo strip so the reveal starts from scattered.
+                setTimeout(() => {
+                  document.querySelector(".scroll-demo")?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }, 50)
+              }
+            }}
+          >
+            Scroll reveal
+          </button>
           <span>{selected.label} / {selected.preset}</span>
         </div>
 
@@ -433,6 +449,32 @@ export function App() {
   preset="${selected.preset}"${selectedColorMode === 1 ? `\n  effectOptions={{ colorMode: 1, tint: "${selectedColors.tint ?? "#ffffff"}" }}` : ""}${ambientId === "none" ? "" : `\n  ambient={{ mode: "${ambientId}" }}`}
 />`}</code></pre>
         </section>
+
+        {scrollDemo && (
+          <section className="scroll-demo">
+            <div className="scroll-demo-spacer">
+              <p className="control-label">Keep scrolling — the field assembles as it enters the viewport</p>
+              <span aria-hidden="true">↓</span>
+            </div>
+            <div className="scroll-demo-stage">
+              <DotMatter
+                key={`reveal-${effectId}-${source}`}
+                src={source}
+                effect={selected.effect}
+                preset={selected.preset}
+                effectOptions={effectOptions}
+                scrollReveal="auto"
+                alt="Scroll reveal demo"
+                className="shader-frame"
+                style={{ "--ratio": sourceRatio } as CSSProperties}
+              />
+            </div>
+            <div className="scroll-demo-spacer">
+              <p className="control-label">Scroll back up to scatter it again — fully interruptible</p>
+              <span aria-hidden="true">↑</span>
+            </div>
+          </section>
+        )}
       </section>
     </main>
   )

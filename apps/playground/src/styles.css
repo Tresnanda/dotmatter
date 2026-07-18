@@ -140,3 +140,8 @@ h1 { margin: 18px 0 14px; font-size: clamp(36px, 4vw, 60px); line-height: 0.94; 
 button.stage-download { cursor: pointer; pointer-events: auto; transition: color 140ms cubic-bezier(.23,1,.32,1), border-color 140ms cubic-bezier(.23,1,.32,1), transform 140ms cubic-bezier(.23,1,.32,1); }
 button.stage-download:hover { color: var(--accent); border-color: var(--accent); }
 button.stage-download:active { transform: scale(.96); }
+
+.scroll-demo { margin-top: 40px; border-top: 1px solid var(--border); }
+.scroll-demo-spacer { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; height: 85vh; color: var(--faint); }
+.scroll-demo-spacer span { font-size: 20px; color: var(--accent); }
+.scroll-demo-stage { display: flex; justify-content: center; background: #050506; border: 1px solid var(--border); overflow: hidden; }
