@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm --filter @dotmatter/core build && pnpm --filter @dotmatter/shaders build && pnpm --filter @dotmatter/react build && pnpm --filter @dotmatter/playground build",
+  "outputDirectory": "apps/playground/dist",
+  "framework": "vite"
+}
