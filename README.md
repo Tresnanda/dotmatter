@@ -6,7 +6,9 @@ Ten effects — **Particles, Dither, Halftone, ASCII, LED, Stitch, Scanline, Mos
 
 Inspired by the interactive shader components popularized by Figma and Framer.
 
-**Using an AI coding agent?** Point it at [`llms.txt`](./llms.txt) — a complete, standalone reference for the entire API written for LLMs. Once the playground is deployed it will also be served at `/llms.txt`.
+**Live playground:** [dotmatter.treshnanda.tech](https://dotmatter.treshnanda.tech)
+
+**Using an AI coding agent?** Point it at [dotmatter.treshnanda.tech/llms.txt](https://dotmatter.treshnanda.tech/llms.txt) — a complete, standalone reference for the entire API written for LLMs (also at [`llms.txt`](./llms.txt) in this repo).
 
 ## Quick start
 
