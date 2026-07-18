@@ -51,6 +51,8 @@ export interface ShaderImageRenderer {
   setAmbient(ambient: AmbientMotion | null): void
   /** Scroll-reveal progress 0–1 (null = fully assembled). */
   setReveal(reveal: number | null): void
+  /** Switch the cursor force between repel and attract on the fly. */
+  setPointerMode(mode: PointerMode): void
   /** Re-render the last frame and return it as a PNG data URL. */
   capture(): string
   destroy(): void
@@ -179,6 +181,7 @@ export function createShaderImageRenderer(
   let interactionState: SpringValueState = { value: 0, velocity: 0 }
   let ambient: AmbientMotion | null = options.ambient ?? null
   let reveal: number | null = null
+  let pointerMode: PointerMode = options.pointerMode ?? "repel"
   let lastFrame: RenderFrame = {}
 
   const rebuildParticleField = () => {
@@ -250,7 +253,7 @@ export function createShaderImageRenderer(
             pointer,
             pointerVelocity,
             pointerActive: pointerIsActive,
-            ...(options.pointerMode === undefined ? {} : { pointerMode: options.pointerMode }),
+            pointerMode,
             ...(frame.extraPointers === undefined ? {} : { extraPointers: frame.extraPointers }),
             ...(frame.scrollVelocity === undefined ? {} : { scrollVelocity: frame.scrollVelocity }),
             deltaTime,
@@ -370,6 +373,9 @@ export function createShaderImageRenderer(
     },
     setReveal(nextReveal) {
       reveal = nextReveal
+    },
+    setPointerMode(nextMode) {
+      pointerMode = nextMode
     },
     capture() {
       // WebGL backbuffers are cleared after compositing; re-render right

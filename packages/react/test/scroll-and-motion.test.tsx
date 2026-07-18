@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => {
     updateEffectOptions: vi.fn(),
     setAmbient: vi.fn(),
     setReveal: vi.fn(),
+    setPointerMode: vi.fn(),
     capture: vi.fn(() => "data:image/png;base64,x"),
     destroy: vi.fn(),
   }
@@ -101,6 +102,61 @@ describe("scroll reveal prop", () => {
       )
     })
     expect(frames.length).toBeGreaterThan(framesAtPause)
+
+    await act(async () => root.unmount())
+    vi.unstubAllGlobals()
+  })
+
+  it("forwards pointerMode toggles to the live renderer without recreating it", async () => {
+    const { root } = await mountWithLoadedImage(
+      <DotMatter src="/a.jpg" effect={particleEffect} alt="A" />,
+    )
+
+    await act(async () => {
+      root.render(
+        <DotMatter
+          src="/a.jpg"
+          effect={particleEffect}
+          pointerMode="attract"
+          alt="A"
+        />,
+      )
+    })
+
+    expect(mocks.createRenderer).toHaveBeenCalledTimes(1)
+    expect(mocks.renderer.setPointerMode).toHaveBeenLastCalledWith("attract")
+
+    await act(async () => root.unmount())
+    vi.unstubAllGlobals()
+  })
+
+  it("starts feeding scroll velocity when scrollSmear is enabled after mount", async () => {
+    const frames: FrameRequestCallback[] = []
+    vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => {
+      frames.push(cb)
+      return frames.length
+    })
+
+    const { root } = await mountWithLoadedImage(
+      <DotMatter src="/a.jpg" effect={particleEffect} alt="A" />,
+    )
+
+    // Enable smear AFTER mount — the toggle path the playground uses.
+    await act(async () => {
+      root.render(
+        <DotMatter src="/a.jpg" effect={particleEffect} scrollSmear alt="A" />,
+      )
+    })
+
+    // Simulate a scroll burst, then run a frame.
+    Object.defineProperty(window, "scrollY", { value: 400, configurable: true })
+    window.dispatchEvent(new Event("scroll"))
+    mocks.renderer.render.mockClear()
+    frames.at(-1)?.(32)
+
+    expect(mocks.renderer.render).toHaveBeenCalledWith(
+      expect.objectContaining({ scrollVelocity: expect.any(Number) }),
+    )
 
     await act(async () => root.unmount())
     vi.unstubAllGlobals()

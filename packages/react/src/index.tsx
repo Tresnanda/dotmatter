@@ -248,13 +248,12 @@ export function DotMatter({
       const now = performance.now()
       const dt = Math.max((now - lastScrollTime) / 1000, 1 / 240)
       const dy = (window.scrollY - lastScrollY) / (window.innerHeight || 1)
-      scrollVelocityRef.current = dy / dt
+      // Gate by the live ref so the smear toggle works without remounting.
+      scrollVelocityRef.current = scrollSmearRef.current ? dy / dt : 0
       lastScrollY = window.scrollY
       lastScrollTime = now
     }
-    if (scrollSmearRef.current) {
-      window.addEventListener("scroll", handleScroll, { passive: true })
-    }
+    window.addEventListener("scroll", handleScroll, { passive: true })
 
     const resizeObserver =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize)
@@ -286,6 +285,10 @@ export function DotMatter({
   useEffect(() => {
     rendererRef.current?.setAmbient(motionReduced ? null : ambient ?? null)
   }, [ambient, motionReduced, sourceRevision])
+
+  useEffect(() => {
+    rendererRef.current?.setPointerMode(pointerMode ?? "repel")
+  }, [pointerMode, sourceRevision])
 
   // Scroll reveal: numeric prop drives directly; "auto" tracks viewport
   // position via scroll + resize (progress 0 at bottom edge entry, 1 once
