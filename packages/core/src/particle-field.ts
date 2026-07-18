@@ -36,11 +36,6 @@ export interface ParticleFieldStep {
   pointerMode?: PointerMode
   /** Additional simultaneous pointers (touch); each gets its own push zone. */
   extraPointers?: readonly (readonly [number, number])[]
-  /**
-   * Page scroll velocity in viewport-heights/second. The whole field lags
-   * behind fast scrolling — a momentum smear that settles via the spring.
-   */
-  scrollVelocity?: number
   deltaTime: number
   aspectRatio: number
   force: number
@@ -243,16 +238,6 @@ export function stepParticleField(
       }
     }
 
-    if (step.scrollVelocity !== undefined && step.scrollVelocity !== 0) {
-      // Momentum smear: the field lags behind page motion. Each particle
-      // lags by a hashed amount (0.5×–1.5×) so the field visibly stretches
-      // rather than translating uniformly — uniform motion is imperceptible
-      // while the page itself is scrolling. Clamped so wild wheels can only
-      // stretch the field, never launch it.
-      const clamped = Math.max(-3, Math.min(3, step.scrollVelocity))
-      const lag = 0.5 + hash(index + 7919)
-      velocityY += clamped * 1.6 * lag * deltaTime
-    }
 
     const damping = Math.pow(step.damping, deltaTime * 60)
     velocityX *= damping

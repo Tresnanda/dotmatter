@@ -39,8 +39,6 @@ export interface RenderFrame {
   pointerActive?: boolean
   /** Additional simultaneous pointers (touch). */
   extraPointers?: readonly (readonly [number, number])[]
-  /** Page scroll velocity in viewport-heights/second (momentum smear). */
-  scrollVelocity?: number
 }
 
 export interface ShaderImageRenderer {
@@ -255,7 +253,6 @@ export function createShaderImageRenderer(
             pointerActive: pointerIsActive,
             pointerMode,
             ...(frame.extraPointers === undefined ? {} : { extraPointers: frame.extraPointers }),
-            ...(frame.scrollVelocity === undefined ? {} : { scrollVelocity: frame.scrollVelocity }),
             deltaTime,
             aspectRatio: logicalWidth / logicalHeight,
             force:

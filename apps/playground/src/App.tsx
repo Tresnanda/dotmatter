@@ -47,7 +47,6 @@ export function App() {
   const [textMode, setTextMode] = useState(false)
   const [scrollDemo, setScrollDemo] = useState(false)
   const [pointerMode, setPointerMode] = useState<"repel" | "attract">("repel")
-  const [scrollSmear, setScrollSmear] = useState(false)
   const [customText, setCustomText] = useState("DOTMATTER")
   const controlsRef = useRef<DotMatterControls | null>(null)
   const selected = effectCatalog.find((entry) => entry.id === effectId)!
@@ -231,13 +230,6 @@ export function App() {
           </button>
           <button
             type="button"
-            className={scrollSmear ? "ambient-option is-active" : "ambient-option"}
-            onClick={() => setScrollSmear((v) => !v)}
-          >
-            Smear
-          </button>
-          <button
-            type="button"
             className={scrollDemo ? "ambient-option is-active" : "ambient-option"}
             onClick={() => {
               setScrollDemo((current) => !current)
@@ -264,7 +256,6 @@ export function App() {
               effectOptions={effectOptions}
               {...(ambient === undefined ? {} : { ambient })}
               pointerMode={pointerMode}
-              scrollSmear={scrollSmear}
               controls={(c: DotMatterControls | null) => { controlsRef.current = c }}
               className="shader-frame"
               style={{ "--ratio": 3.2 } as CSSProperties}
@@ -278,7 +269,6 @@ export function App() {
             effectOptions={effectOptions}
             {...(ambient === undefined ? {} : { ambient })}
             pointerMode={pointerMode}
-            scrollSmear={scrollSmear}
             controls={(c: DotMatterControls | null) => { controlsRef.current = c }}
             alt="Interactive shader preview"
             className="shader-frame"
@@ -473,11 +463,11 @@ export function App() {
         {scrollDemo && (
           <section className="scroll-demo">
             <div className="scroll-demo-spacer">
-              <p className="control-label">Keep scrolling — the canvas sticks while the field reacts</p>
+              <p className="control-label">Keep scrolling — the field assembles as it comes into view</p>
               <span aria-hidden="true">↓</span>
             </div>
             {/* Tall track with a sticky stage: the canvas stays on screen
-                while you scroll past, so reveal + smear play out in view. */}
+                while you scroll past, so the reveal plays out in view. */}
             <div className="scroll-demo-track">
               <div className="scroll-demo-sticky">
                 <DotMatter
@@ -487,7 +477,6 @@ export function App() {
                   preset={selected.preset}
                   effectOptions={effectOptions}
                   scrollReveal="auto"
-                  scrollSmear
                   pointerMode={pointerMode}
                   alt="Scroll reveal demo"
                   className="shader-frame"

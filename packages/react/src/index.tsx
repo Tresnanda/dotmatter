@@ -31,8 +31,6 @@ export interface DotMatterProps {
   ambient?: AmbientMotion
   /** repel (default) pushes particles away from the cursor; attract pulls them in. */
   pointerMode?: PointerMode
-  /** Feed page scroll velocity into the field as a momentum smear. */
-  scrollSmear?: boolean
   /**
    * Scroll-driven assembly. Pass "auto" to track this element's viewport
    * position (particles condense into place as it scrolls in), or a number
@@ -74,7 +72,6 @@ export function DotMatter({
   effectOptions,
   ambient,
   pointerMode,
-  scrollSmear = false,
   scrollReveal,
   reduceMotion,
   className,
@@ -91,13 +88,10 @@ export function DotMatter({
   const pointerActiveRef = useRef(false)
   const extraPointersRef = useRef<Map<number, readonly [number, number]>>(new Map())
   const primaryPointerIdRef = useRef<number | null>(null)
-  const scrollVelocityRef = useRef(0)
   const onErrorRef = useRef(onError)
   onErrorRef.current = onError
   const controlsRef = useRef(controls)
   controlsRef.current = controls
-  const scrollSmearRef = useRef(scrollSmear)
-  scrollSmearRef.current = scrollSmear
   const [sourceRevision, setSourceRevision] = useState(0)
   const [rendererReady, setRendererReady] = useState(false)
   const [systemReducedMotion, setSystemReducedMotion] = useState(false)
@@ -197,19 +191,12 @@ export function DotMatter({
     let visible = true
 
     const render = (now: number) => {
-      // Velocity lingers ~half a second after scrolling stops so the smear
-      // has time to read before the spring reels it back.
-      scrollVelocityRef.current *= 0.94
-      if (Math.abs(scrollVelocityRef.current) < 0.01) scrollVelocityRef.current = 0
       const extras = Array.from(extraPointersRef.current.values())
       renderer.render({
         time: (now - startedAt) / 1000,
         pointer: pointerRef.current,
         pointerActive: pointerActiveRef.current,
         ...(extras.length === 0 ? {} : { extraPointers: extras }),
-        ...(scrollVelocityRef.current === 0
-          ? {}
-          : { scrollVelocity: scrollVelocityRef.current }),
       })
       if (running && visible && !document.hidden) {
         animationFrame = requestAnimationFrame(render)
@@ -241,20 +228,6 @@ export function DotMatter({
     container.addEventListener("pointerup", handlePointerUp)
     container.addEventListener("pointercancel", handlePointerUp)
 
-    // Scroll smear: exponential decay of instantaneous scroll velocity in
-    // viewport-heights/second, so a flick leaves a momentum tail.
-    let lastScrollY = window.scrollY
-    let lastScrollTime = performance.now()
-    const handleScroll = () => {
-      const now = performance.now()
-      const dt = Math.max((now - lastScrollTime) / 1000, 1 / 240)
-      const dy = (window.scrollY - lastScrollY) / (window.innerHeight || 1)
-      // Gate by the live ref so the smear toggle works without remounting.
-      scrollVelocityRef.current = scrollSmearRef.current ? dy / dt : 0
-      lastScrollY = window.scrollY
-      lastScrollTime = now
-    }
-    window.addEventListener("scroll", handleScroll, { passive: true })
 
     const resizeObserver =
       typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize)
@@ -272,7 +245,6 @@ export function DotMatter({
       container.removeEventListener("pointerleave", handlePointerLeave)
       container.removeEventListener("pointerup", handlePointerUp)
       container.removeEventListener("pointercancel", handlePointerUp)
-      window.removeEventListener("scroll", handleScroll)
       controlsRef.current?.(null)
       renderer.destroy()
       rendererRef.current = null
@@ -410,7 +382,6 @@ export interface DotMatterTextProps {
   scrollReveal?: "auto" | number
   reduceMotion?: boolean
   pointerMode?: PointerMode
-  scrollSmear?: boolean
   controls?: (controls: DotMatterControls | null) => void
   /** CSS font shorthand for rasterization. Default: bold sans at 200px. */
   font?: string
