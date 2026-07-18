@@ -197,8 +197,9 @@ export function DotMatter({
     let visible = true
 
     const render = (now: number) => {
-      // Velocity decays quickly once scrolling stops so the smear releases.
-      scrollVelocityRef.current *= 0.86
+      // Velocity lingers ~half a second after scrolling stops so the smear
+      // has time to read before the spring reels it back.
+      scrollVelocityRef.current *= 0.94
       if (Math.abs(scrollVelocityRef.current) < 0.01) scrollVelocityRef.current = 0
       const extras = Array.from(extraPointersRef.current.values())
       renderer.render({

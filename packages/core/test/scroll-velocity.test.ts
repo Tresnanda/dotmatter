@@ -22,16 +22,39 @@ const baseStep = {
   damping: 0.92,
 }
 
+function twoParticles(): ParticleFieldState {
+  return {
+    count: 2,
+    home: new Float32Array([0.3, 0.5, 0.7, 0.5]),
+    positions: new Float32Array([0.3, 0.5, 0.7, 0.5]),
+    velocities: new Float32Array([0, 0, 0, 0]),
+    sourceUvs: new Float32Array([0.3, 0.5, 0.7, 0.5]),
+  }
+}
+
 describe("scroll velocity smear", () => {
-  it("drags the whole field opposite the scroll direction", () => {
+  it("visibly stretches the field during a sustained scroll", () => {
     const field = oneParticle()
 
-    // Scrolling down (positive velocity) → content moves up → particles lag
-    // behind, smearing downward in canvas space (positive y is up here, so
-    // the lag is a negative-y drag... assert simple displacement).
-    stepParticleField(field, { ...baseStep, scrollVelocity: 2 })
+    for (let frame = 0; frame < 12; frame += 1) {
+      stepParticleField(field, { ...baseStep, scrollVelocity: 2 })
+    }
 
-    expect(field.positions[1]).not.toBe(0.5)
+    // A fifth of a second of moderate scrolling must move particles at
+    // least ~2% of the field — clearly perceptible, not a sub-pixel twitch.
+    expect(Math.abs(field.positions[1]! - 0.5)).toBeGreaterThan(0.02)
+  })
+
+  it("lags particles by different amounts so the smear stretches, not slides", () => {
+    const field = twoParticles()
+
+    for (let frame = 0; frame < 12; frame += 1) {
+      stepParticleField(field, { ...baseStep, scrollVelocity: 2 })
+    }
+
+    // Uniform translation is invisible while the page itself scrolls; the
+    // per-particle lag variation is what reads as a smear.
+    expect(field.positions[1]).not.toBeCloseTo(field.positions[3]!, 4)
   })
 
   it("applies no smear when scroll velocity is zero", () => {

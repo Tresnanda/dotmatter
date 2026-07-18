@@ -473,21 +473,27 @@ export function App() {
         {scrollDemo && (
           <section className="scroll-demo">
             <div className="scroll-demo-spacer">
-              <p className="control-label">Keep scrolling — the field assembles as it enters the viewport</p>
+              <p className="control-label">Keep scrolling — the canvas sticks while the field reacts</p>
               <span aria-hidden="true">↓</span>
             </div>
-            <div className="scroll-demo-stage">
-              <DotMatter
-                key={`reveal-${effectId}-${source}`}
-                src={source}
-                effect={selected.effect}
-                preset={selected.preset}
-                effectOptions={effectOptions}
-                scrollReveal="auto"
-                alt="Scroll reveal demo"
-                className="shader-frame"
-                style={{ "--ratio": sourceRatio } as CSSProperties}
-              />
+            {/* Tall track with a sticky stage: the canvas stays on screen
+                while you scroll past, so reveal + smear play out in view. */}
+            <div className="scroll-demo-track">
+              <div className="scroll-demo-sticky">
+                <DotMatter
+                  key={`reveal-${effectId}-${source}`}
+                  src={source}
+                  effect={selected.effect}
+                  preset={selected.preset}
+                  effectOptions={effectOptions}
+                  scrollReveal="auto"
+                  scrollSmear
+                  pointerMode={pointerMode}
+                  alt="Scroll reveal demo"
+                  className="shader-frame"
+                  style={{ "--ratio": sourceRatio } as CSSProperties}
+                />
+              </div>
             </div>
             <div className="scroll-demo-spacer">
               <p className="control-label">Scroll back up to scatter it again — fully interruptible</p>

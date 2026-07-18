@@ -244,10 +244,14 @@ export function stepParticleField(
     }
 
     if (step.scrollVelocity !== undefined && step.scrollVelocity !== 0) {
-      // Momentum smear: the field lags behind page motion. Clamped so wild
-      // scroll wheels can only stretch the field, never launch it.
-      const clamped = Math.max(-4, Math.min(4, step.scrollVelocity))
-      velocityY += clamped * 0.55 * deltaTime * 60 * deltaTime
+      // Momentum smear: the field lags behind page motion. Each particle
+      // lags by a hashed amount (0.5×–1.5×) so the field visibly stretches
+      // rather than translating uniformly — uniform motion is imperceptible
+      // while the page itself is scrolling. Clamped so wild wheels can only
+      // stretch the field, never launch it.
+      const clamped = Math.max(-3, Math.min(3, step.scrollVelocity))
+      const lag = 0.5 + hash(index + 7919)
+      velocityY += clamped * 1.6 * lag * deltaTime
     }
 
     const damping = Math.pow(step.damping, deltaTime * 60)

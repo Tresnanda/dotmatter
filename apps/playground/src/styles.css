@@ -145,3 +145,6 @@ button.stage-download:active { transform: scale(.96); }
 .scroll-demo-spacer { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; height: 85vh; color: var(--faint); }
 .scroll-demo-spacer span { font-size: 20px; color: var(--accent); }
 .scroll-demo-stage { display: flex; justify-content: center; background: #050506; border: 1px solid var(--border); overflow: hidden; }
+
+.scroll-demo-track { height: 260vh; }
+.scroll-demo-sticky { position: sticky; top: 10vh; display: flex; justify-content: center; background: #050506; border: 1px solid var(--border); overflow: hidden; }
