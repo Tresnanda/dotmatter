@@ -203,6 +203,47 @@ describe("createShaderImageRenderer", () => {
     expect(context.bufferDataCalls).toBe(allocations)
   })
 
+  it("captures the current frame as a data URL after a fresh render", () => {
+    const context = new RendererContext()
+    const canvas = {
+      width: 320,
+      height: 180,
+      getContext: () => context,
+      toDataURL: vi.fn(() => "data:image/png;base64,abc"),
+    } as unknown as HTMLCanvasElement
+
+    const renderer = createShaderImageRenderer(canvas, { effect })
+    renderer.render({ time: 1 / 60 })
+    const url = renderer.capture()
+
+    // Capture must re-render immediately before reading so the WebGL
+    // backbuffer is not stale (no preserveDrawingBuffer needed).
+    expect(url).toBe("data:image/png;base64,abc")
+    expect(context.drawArguments.length).toBeGreaterThan(0)
+  })
+
+  it("feeds scroll reveal progress into the simulation", () => {
+    const context = new RendererContext()
+    const canvas = {
+      width: 40,
+      height: 20,
+      getContext: () => context,
+    } as unknown as HTMLCanvasElement
+
+    const renderer = createShaderImageRenderer(canvas, {
+      effect: particleGeometryEffect,
+    })
+    renderer.resize(40, 20)
+    renderer.setReveal(0)
+    for (let frame = 1; frame <= 60; frame += 1) {
+      renderer.render({ time: frame / 60 })
+    }
+
+    // At reveal 0, uploaded positions should be scattered away from homes.
+    const positions = context.uploadedPositions!
+    expect(Math.abs(positions[1]! - 0.75)).toBeGreaterThan(0.05)
+  })
+
   it("animates particles ambiently when an ambient mode is configured", () => {
     const context = new RendererContext()
     const canvas = {

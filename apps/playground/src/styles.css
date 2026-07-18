@@ -133,3 +133,10 @@ h1 { margin: 18px 0 14px; font-size: clamp(36px, 4vw, 60px); line-height: 0.94; 
   html { scroll-behavior: auto; }
   .effect-option { transition: color 120ms linear; }
 }
+
+.source-mode-toggle { display: flex; gap: 8px; margin-bottom: 14px; }
+.text-input { width: 100%; padding: 12px 0; border: 0; border-bottom: 1px solid rgba(255,255,255,.22); background: transparent; color: rgba(255,255,255,.92); font: 500 15px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; }
+.text-input:focus { outline: none; border-bottom-color: var(--accent); }
+button.stage-download { cursor: pointer; pointer-events: auto; transition: color 140ms cubic-bezier(.23,1,.32,1), border-color 140ms cubic-bezier(.23,1,.32,1), transform 140ms cubic-bezier(.23,1,.32,1); }
+button.stage-download:hover { color: var(--accent); border-color: var(--accent); }
+button.stage-download:active { transform: scale(.96); }

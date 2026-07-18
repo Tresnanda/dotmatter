@@ -39,6 +39,13 @@ export interface ParticleFieldStep {
   /** Simulation clock in seconds; required for ambient motion. */
   time?: number
   ambient?: AmbientMotion
+  /**
+   * Scroll-reveal progress 0–1. At 0, particles seek a scattered target
+   * (drifted below their home with hashed offsets); at 1 they assemble at
+   * home. Undefined = fully assembled. Values are interruptible — scrolling
+   * back re-scatters through the same spring.
+   */
+  reveal?: number
 }
 
 // Cheap deterministic per-particle hash for jitter phase offsets.
@@ -154,8 +161,25 @@ export function stepParticleField(
     let velocityX = field.velocities[offset]!
     let velocityY = field.velocities[offset + 1]!
 
-    const homeX = field.home[offset]!
-    const homeY = field.home[offset + 1]!
+    let homeX = field.home[offset]!
+    let homeY = field.home[offset + 1]!
+
+    if (step.reveal !== undefined && step.reveal < 1) {
+      // Assembly reveal: the spring target slides from a hashed scatter
+      // position (drifted downward, spread sideways) to the true home as
+      // reveal goes 0 → 1. Cheap per-particle hash keeps neighbors
+      // decorrelated so the reveal reads as a cloud condensing, not a slide.
+      const scatterSeed = hash(index)
+      const scatterX = homeX + (scatterSeed - 0.5) * 0.6
+      const scatterY = homeY - 0.35 - scatterSeed * 0.4
+      const progress = Math.min(Math.max(step.reveal, 0), 1)
+      // Ease-out on the blend: early scroll moves particles most of the way,
+      // the last stretch is a gentle settle.
+      const eased = 1 - (1 - progress) * (1 - progress)
+      homeX = scatterX + (homeX - scatterX) * eased
+      homeY = scatterY + (homeY - scatterY) * eased
+    }
+
     velocityX += (homeX - positionX) * step.spring * deltaTime
     velocityY += (homeY - positionY) * step.spring * deltaTime
 

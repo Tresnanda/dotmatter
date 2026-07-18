@@ -19,7 +19,8 @@ import {
 } from "react"
 
 export interface DotMatterProps {
-  src: string
+  /** Image/video URL, or a canvas element used directly as the source. */
+  src: string | HTMLCanvasElement
   effect: EffectDefinition
   alt: string
   /** Treat src as a video: renders a muted looped <video> streamed to the GPU. */
@@ -27,9 +28,27 @@ export interface DotMatterProps {
   preset?: string
   effectOptions?: Record<string, unknown>
   ambient?: AmbientMotion
+  /**
+   * Scroll-driven assembly. Pass "auto" to track this element's viewport
+   * position (particles condense into place as it scrolls in), or a number
+   * 0–1 to drive the progress yourself.
+   */
+  scrollReveal?: "auto" | number
+  /**
+   * Gentle mode: no ambient drift, no reveal scatter, calmer springs.
+   * Defaults to the user's prefers-reduced-motion setting.
+   */
+  reduceMotion?: boolean
   className?: string
   style?: CSSProperties
   onError?: (error: Error & { code?: string }) => void
+  /** Receives imperative controls ({ capture }) once the renderer is live. */
+  controls?: (controls: DotMatterControls | null) => void
+}
+
+export interface DotMatterControls {
+  /** Snapshot the current frame as a PNG data URL. */
+  capture(): string
 }
 
 const mediaStyle: CSSProperties = {
@@ -49,9 +68,12 @@ export function DotMatter({
   preset,
   effectOptions,
   ambient,
+  scrollReveal,
+  reduceMotion,
   className,
   style,
   onError,
+  controls,
 }: DotMatterProps): ReactElement {
   const containerRef = useRef<HTMLSpanElement>(null)
   const imageRef = useRef<HTMLImageElement>(null)
@@ -62,15 +84,36 @@ export function DotMatter({
   const pointerActiveRef = useRef(false)
   const onErrorRef = useRef(onError)
   onErrorRef.current = onError
+  const controlsRef = useRef(controls)
+  controlsRef.current = controls
   const [sourceRevision, setSourceRevision] = useState(0)
   const [rendererReady, setRendererReady] = useState(false)
+  const [systemReducedMotion, setSystemReducedMotion] = useState(false)
+
+  useEffect(() => {
+    if (typeof matchMedia === "undefined") return
+    const query = matchMedia("(prefers-reduced-motion: reduce)")
+    setSystemReducedMotion(query.matches)
+    const onChange = (event: MediaQueryListEvent) => setSystemReducedMotion(event.matches)
+    query.addEventListener("change", onChange)
+    return () => query.removeEventListener("change", onChange)
+  }, [])
+
+  const motionReduced = reduceMotion ?? systemReducedMotion
+
+  const canvasSource = typeof src === "string" ? null : src
 
   useEffect(() => {
     const container = containerRef.current
-    const image = video ? videoRef.current : imageRef.current
+    const image = canvasSource ?? (video ? videoRef.current : imageRef.current)
     const canvas = canvasRef.current
 
-    if (sourceRevision === 0 || container === null || image === null || canvas === null) {
+    if (
+      (canvasSource === null && sourceRevision === 0) ||
+      container === null ||
+      image === null ||
+      canvas === null
+    ) {
       return
     }
 
@@ -85,7 +128,11 @@ export function DotMatter({
         ...(ambient === undefined ? {} : { ambient }),
       })
       rendererRef.current = renderer
-      renderer.setSource(image, video ? { continuous: true } : undefined)
+      controlsRef.current?.({ capture: () => renderer.capture() })
+      renderer.setSource(
+        image as TexImageSource,
+        video ? { continuous: true } : undefined,
+      )
       setRendererReady(true)
     } catch (error) {
       setRendererReady(false)
@@ -112,14 +159,37 @@ export function DotMatter({
     }
 
     const startedAt = performance.now()
+    let running = true
+    let visible = true
+
     const render = (now: number) => {
       renderer.render({
         time: (now - startedAt) / 1000,
         pointer: pointerRef.current,
         pointerActive: pointerActiveRef.current,
       })
+      if (running && visible && !document.hidden) {
+        animationFrame = requestAnimationFrame(render)
+      }
+    }
+
+    const resume = () => {
+      if (!running || !visible || document.hidden) return
+      cancelAnimationFrame(animationFrame)
       animationFrame = requestAnimationFrame(render)
     }
+
+    // Offscreen and hidden-tab pause: a stopped field costs nothing.
+    const handleVisibility = () => resume()
+    const intersectionObserver =
+      typeof IntersectionObserver === "undefined"
+        ? null
+        : new IntersectionObserver((entries) => {
+            visible = entries[entries.length - 1]?.isIntersecting ?? true
+            resume()
+          })
+    intersectionObserver?.observe(container)
+    document.addEventListener("visibilitychange", handleVisibility)
 
     resize()
     container.addEventListener("pointerenter", handlePointerEnter)
@@ -132,23 +202,66 @@ export function DotMatter({
     animationFrame = requestAnimationFrame(render)
 
     return () => {
+      running = false
       cancelAnimationFrame(animationFrame)
+      intersectionObserver?.disconnect()
+      document.removeEventListener("visibilitychange", handleVisibility)
       resizeObserver?.disconnect()
       container.removeEventListener("pointerenter", handlePointerEnter)
       container.removeEventListener("pointermove", handlePointerMove)
       container.removeEventListener("pointerleave", handlePointerLeave)
+      controlsRef.current?.(null)
       renderer.destroy()
       rendererRef.current = null
     }
-  }, [effect, sourceRevision, video])
+  }, [effect, sourceRevision, video, canvasSource])
 
   useEffect(() => {
     rendererRef.current?.updateEffectOptions(effectOptions ?? {}, preset)
   }, [effectOptions, preset])
 
   useEffect(() => {
-    rendererRef.current?.setAmbient(ambient ?? null)
-  }, [ambient])
+    rendererRef.current?.setAmbient(motionReduced ? null : ambient ?? null)
+  }, [ambient, motionReduced, sourceRevision])
+
+  // Scroll reveal: numeric prop drives directly; "auto" tracks viewport
+  // position via scroll + resize (progress 0 at bottom edge entry, 1 once
+  // the element's center clears ~35% up the viewport). Reduced motion pins
+  // the field fully assembled.
+  useEffect(() => {
+    const renderer = rendererRef.current
+    if (renderer === null) return
+
+    if (motionReduced || scrollReveal === undefined) {
+      renderer.setReveal(null)
+      return
+    }
+
+    if (typeof scrollReveal === "number") {
+      renderer.setReveal(Math.min(Math.max(scrollReveal, 0), 1))
+      return
+    }
+
+    const container = containerRef.current
+    if (container === null) return
+
+    const update = () => {
+      const bounds = container.getBoundingClientRect()
+      const viewport = window.innerHeight || 1
+      // 0 when the element top touches the viewport bottom; 1 when it has
+      // risen 65% of the way up. Clamped and monotonic per position.
+      const progress = (viewport - bounds.top) / (viewport * 0.65)
+      renderer.setReveal(Math.min(Math.max(progress, 0), 1))
+    }
+
+    update()
+    window.addEventListener("scroll", update, { passive: true })
+    window.addEventListener("resize", update)
+    return () => {
+      window.removeEventListener("scroll", update)
+      window.removeEventListener("resize", update)
+    }
+  }, [scrollReveal, motionReduced, sourceRevision])
 
   return (
     <span
@@ -162,10 +275,10 @@ export function DotMatter({
         ...style,
       }}
     >
-      {video ? (
+      {canvasSource !== null ? null : video ? (
         <video
           ref={videoRef}
-          src={src}
+          src={src as string}
           muted
           loop
           playsInline
@@ -180,7 +293,7 @@ export function DotMatter({
       ) : (
         <img
           ref={imageRef}
-          src={src}
+          src={src as string}
           alt={alt}
           onLoad={() => setSourceRevision((revision) => revision + 1)}
           style={{
@@ -213,6 +326,89 @@ export function ParticleImage(props: FlagshipDotMatterProps): ReactElement {
 
 export function HalftoneImage(props: FlagshipDotMatterProps): ReactElement {
   return <DotMatter {...props} effect={halftoneEffect} />
+}
+
+
+export interface DotMatterTextProps {
+  /** The text to render as a particle field. */
+  text: string
+  effect: EffectDefinition
+  preset?: string
+  effectOptions?: Record<string, unknown>
+  ambient?: AmbientMotion
+  scrollReveal?: "auto" | number
+  reduceMotion?: boolean
+  controls?: (controls: DotMatterControls | null) => void
+  /** CSS font shorthand for rasterization. Default: bold sans at 200px. */
+  font?: string
+  /** Text fill used for luminance sampling. Default: white on transparent. */
+  fill?: string
+  className?: string
+  style?: CSSProperties
+  onError?: (error: Error & { code?: string }) => void
+}
+
+/**
+ * Render a headline as an interactive particle field. The text is
+ * rasterized once to an offscreen canvas (white on transparent, so the
+ * alpha mask allocates particles only inside the glyphs), then fed through
+ * the exact same pipeline as images. The real text stays in the DOM,
+ * visually hidden, for screen readers and SEO.
+ */
+export function DotMatterText({
+  text,
+  font = "700 200px system-ui, sans-serif",
+  fill = "#ffffff",
+  ...rest
+}: DotMatterTextProps): ReactElement {
+  const [sourceCanvas, setSourceCanvas] = useState<HTMLCanvasElement | null>(null)
+
+  useEffect(() => {
+    const canvas = document.createElement("canvas")
+    const context = canvas.getContext("2d")
+    const padding = 48
+
+    if (context !== null) {
+      context.font = font
+      const metrics = context.measureText(text)
+      canvas.width = Math.max(2, Math.ceil(metrics.width) + padding * 2)
+      canvas.height = Math.max(
+        2,
+        Math.ceil(
+          (metrics.actualBoundingBoxAscent || 150) +
+            (metrics.actualBoundingBoxDescent || 50),
+        ) + padding * 2,
+      )
+      // Canvas state resets when resized — set font again.
+      const draw = canvas.getContext("2d")!
+      draw.font = font
+      draw.fillStyle = fill
+      draw.textBaseline = "top"
+      draw.fillText(text, padding, padding)
+    }
+
+    setSourceCanvas(canvas)
+  }, [text, font, fill])
+
+  return (
+    <span style={{ position: "relative", display: "block" }}>
+      {sourceCanvas !== null && (
+        <DotMatter src={sourceCanvas} alt="" {...rest} />
+      )}
+      <span
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {text}
+      </span>
+    </span>
+  )
 }
 
 // Back-compat aliases from the pre-rename API.

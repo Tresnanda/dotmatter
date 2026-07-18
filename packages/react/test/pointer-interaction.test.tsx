@@ -8,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   resize: vi.fn(),
   setSource: vi.fn(),
   updateEffectOptions: vi.fn(),
+  setAmbient: vi.fn(),
+  setReveal: vi.fn(),
   destroy: vi.fn(),
 }))
 

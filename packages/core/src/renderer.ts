@@ -42,6 +42,10 @@ export interface ShaderImageRenderer {
   setSource(source: TexImageSource, options?: { continuous?: boolean }): void
   updateEffectOptions(options: Record<string, unknown>, preset?: string): void
   setAmbient(ambient: AmbientMotion | null): void
+  /** Scroll-reveal progress 0–1 (null = fully assembled). */
+  setReveal(reveal: number | null): void
+  /** Re-render the last frame and return it as a PNG data URL. */
+  capture(): string
   destroy(): void
 }
 
@@ -167,6 +171,8 @@ export function createShaderImageRenderer(
   let pointerVelocity: [number, number] = [0, 0]
   let interactionState: SpringValueState = { value: 0, velocity: 0 }
   let ambient: AmbientMotion | null = options.ambient ?? null
+  let reveal: number | null = null
+  let lastFrame: RenderFrame = {}
 
   const rebuildParticleField = () => {
     if (!isParticleGeometry || sourceUvBuffer === null) {
@@ -199,6 +205,7 @@ export function createShaderImageRenderer(
 
   return {
     render(frame = {}) {
+      lastFrame = frame
       const pointer = frame.pointer ?? [0.5, 0.5]
       const time = frame.time ?? 0
       const deltaTime = previousTime === null ? 1 / 60 : time - previousTime
@@ -246,6 +253,7 @@ export function createShaderImageRenderer(
             damping: resolvedOptions.damping as number,
             time,
             ...(ambient === null ? {} : { ambient }),
+            ...(reveal === null ? {} : { reveal }),
           })
           gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
           gl.bufferSubData(gl.ARRAY_BUFFER, 0, particleField.positions)
@@ -349,6 +357,16 @@ export function createShaderImageRenderer(
     },
     setAmbient(nextAmbient) {
       ambient = nextAmbient
+    },
+    setReveal(nextReveal) {
+      reveal = nextReveal
+    },
+    capture() {
+      // WebGL backbuffers are cleared after compositing; re-render right
+      // before toDataURL so the pixels are fresh without needing
+      // preserveDrawingBuffer (which costs performance every frame).
+      this.render(lastFrame)
+      return canvas.toDataURL("image/png")
     },
     destroy() {
       gl.deleteBuffer(positionBuffer)

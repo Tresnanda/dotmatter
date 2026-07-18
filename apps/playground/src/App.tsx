@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react"
-import { DotMatter } from "@dotmatter/react"
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
+import { DotMatter, DotMatterText, type DotMatterControls } from "@dotmatter/react"
 import type { AmbientMotion } from "@dotmatter/core"
 import {
   colorControls,
@@ -44,6 +44,9 @@ export function App() {
   )
   // Natural aspect ratio of the current source; the frame follows the image.
   const [sourceRatio, setSourceRatio] = useState(16 / 10)
+  const [textMode, setTextMode] = useState(false)
+  const [customText, setCustomText] = useState("DOTMATTER")
+  const controlsRef = useRef<DotMatterControls | null>(null)
   const selected = effectCatalog.find((entry) => entry.id === effectId)!
   const selectedOptions = optionsByEffect[effectId]
   const selectedColors = colorsByEffect[effectId]
@@ -147,6 +150,33 @@ export function App() {
           </p>
         </div>
         <div className="hero-source">
+          <div className="source-mode-toggle">
+            <button
+              type="button"
+              className={textMode ? "ambient-option" : "ambient-option is-active"}
+              onClick={() => setTextMode(false)}
+            >
+              Image
+            </button>
+            <button
+              type="button"
+              className={textMode ? "ambient-option is-active" : "ambient-option"}
+              onClick={() => setTextMode(true)}
+            >
+              Text
+            </button>
+          </div>
+          {textMode && (
+            <input
+              className="text-input"
+              type="text"
+              value={customText}
+              maxLength={24}
+              onChange={(event) => setCustomText(event.currentTarget.value.toUpperCase())}
+              aria-label="Text to render"
+            />
+          )}
+          {!textMode && (
           <label className="upload-control">
             <span>{uploadedSource === null ? "Choose an image" : "Replace image"}</span>
             <span aria-hidden="true">↗</span>
@@ -156,7 +186,8 @@ export function App() {
               onChange={(event) => handleUpload(event.currentTarget.files?.[0])}
             />
           </label>
-          {uploadedSource !== null && (
+          )}
+          {!textMode && uploadedSource !== null && (
             <button
               className="text-button"
               type="button"
@@ -192,6 +223,19 @@ export function App() {
         </div>
 
         <div className="stage">
+          {textMode ? (
+            <DotMatterText
+              key={`${effectId}-text-${customText}`}
+              text={customText || "DOTMATTER"}
+              effect={selected.effect}
+              preset={selected.preset}
+              effectOptions={effectOptions}
+              {...(ambient === undefined ? {} : { ambient })}
+              controls={(c: DotMatterControls | null) => { controlsRef.current = c }}
+              className="shader-frame"
+              style={{ "--ratio": 3.2 } as CSSProperties}
+            />
+          ) : (
           <DotMatter
             key={`${effectId}-${source}`}
             src={source}
@@ -199,12 +243,27 @@ export function App() {
             preset={selected.preset}
             effectOptions={effectOptions}
             {...(ambient === undefined ? {} : { ambient })}
+            controls={(c: DotMatterControls | null) => { controlsRef.current = c }}
             alt="Interactive shader preview"
             className="shader-frame"
             style={{ "--ratio": sourceRatio } as CSSProperties}
           />
+          )}
           <div className="stage-corner stage-corner-left">Move pointer</div>
-          <div className="stage-corner stage-corner-right">WEBGL2</div>
+          <button
+            type="button"
+            className="stage-corner stage-corner-right stage-download"
+            onClick={() => {
+              const url = controlsRef.current?.capture()
+              if (url === undefined) return
+              const link = document.createElement("a")
+              link.href = url
+              link.download = "dotmatter.png"
+              link.click()
+            }}
+          >
+            ↓ PNG
+          </button>
         </div>
 
         <div className="control-deck">
