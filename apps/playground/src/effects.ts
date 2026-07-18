@@ -1,9 +1,12 @@
 import {
   asciiEffect,
+  contourEffect,
   ditherEffect,
   halftoneEffect,
   ledEffect,
+  mosaicEffect,
   particleEffect,
+  ringsEffect,
   scanlineEffect,
   stitchEffect,
 } from "@dotmatter/shaders"
@@ -57,6 +60,27 @@ export const effectCatalog = [
     description: "Bar segments, CRT / receipt printer.",
     effect: scanlineEffect,
     preset: "crt",
+  },
+  {
+    id: "mosaic",
+    label: "Mosaic",
+    description: "Rounded tiles sized by tone.",
+    effect: mosaicEffect,
+    preset: "tiles",
+  },
+  {
+    id: "rings",
+    label: "Rings",
+    description: "Concentric strokes, engraved medallions.",
+    effect: ringsEffect,
+    preset: "engraving",
+  },
+  {
+    id: "contour",
+    label: "Contour",
+    description: "Gradient-angled strokes, pen sketch.",
+    effect: contourEffect,
+    preset: "sketch",
   },
 ] as const
 

@@ -46,6 +46,8 @@ export function App() {
   const [sourceRatio, setSourceRatio] = useState(16 / 10)
   const [textMode, setTextMode] = useState(false)
   const [scrollDemo, setScrollDemo] = useState(false)
+  const [pointerMode, setPointerMode] = useState<"repel" | "attract">("repel")
+  const [scrollSmear, setScrollSmear] = useState(false)
   const [customText, setCustomText] = useState("DOTMATTER")
   const controlsRef = useRef<DotMatterControls | null>(null)
   const selected = effectCatalog.find((entry) => entry.id === effectId)!
@@ -222,6 +224,20 @@ export function App() {
           </nav>
           <button
             type="button"
+            className={pointerMode === "attract" ? "ambient-option is-active" : "ambient-option"}
+            onClick={() => setPointerMode((m) => (m === "repel" ? "attract" : "repel"))}
+          >
+            {pointerMode === "attract" ? "Attract" : "Repel"}
+          </button>
+          <button
+            type="button"
+            className={scrollSmear ? "ambient-option is-active" : "ambient-option"}
+            onClick={() => setScrollSmear((v) => !v)}
+          >
+            Smear
+          </button>
+          <button
+            type="button"
             className={scrollDemo ? "ambient-option is-active" : "ambient-option"}
             onClick={() => {
               setScrollDemo((current) => !current)
@@ -247,6 +263,8 @@ export function App() {
               preset={selected.preset}
               effectOptions={effectOptions}
               {...(ambient === undefined ? {} : { ambient })}
+              pointerMode={pointerMode}
+              scrollSmear={scrollSmear}
               controls={(c: DotMatterControls | null) => { controlsRef.current = c }}
               className="shader-frame"
               style={{ "--ratio": 3.2 } as CSSProperties}
@@ -259,6 +277,8 @@ export function App() {
             preset={selected.preset}
             effectOptions={effectOptions}
             {...(ambient === undefined ? {} : { ambient })}
+            pointerMode={pointerMode}
+            scrollSmear={scrollSmear}
             controls={(c: DotMatterControls | null) => { controlsRef.current = c }}
             alt="Interactive shader preview"
             className="shader-frame"

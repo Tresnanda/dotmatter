@@ -10,6 +10,7 @@ import {
   stepParticleField,
   type AmbientMotion,
   type ParticleFieldState,
+  type PointerMode,
 } from "./particle-field.js"
 import { stepSpringValue, type SpringValueState } from "./spring.js"
 import { compileShaderProgram } from "./webgl.js"
@@ -28,12 +29,18 @@ export interface ShaderImageRendererOptions {
   effectOptions?: Record<string, unknown>
   preset?: string
   ambient?: AmbientMotion
+  /** repel (default) pushes particles away from the cursor; attract pulls them in. */
+  pointerMode?: PointerMode
 }
 
 export interface RenderFrame {
   time?: number
   pointer?: readonly [number, number]
   pointerActive?: boolean
+  /** Additional simultaneous pointers (touch). */
+  extraPointers?: readonly (readonly [number, number])[]
+  /** Page scroll velocity in viewport-heights/second (momentum smear). */
+  scrollVelocity?: number
 }
 
 export interface ShaderImageRenderer {
@@ -243,6 +250,9 @@ export function createShaderImageRenderer(
             pointer,
             pointerVelocity,
             pointerActive: pointerIsActive,
+            ...(options.pointerMode === undefined ? {} : { pointerMode: options.pointerMode }),
+            ...(frame.extraPointers === undefined ? {} : { extraPointers: frame.extraPointers }),
+            ...(frame.scrollVelocity === undefined ? {} : { scrollVelocity: frame.scrollVelocity }),
             deltaTime,
             aspectRatio: logicalWidth / logicalHeight,
             force:

@@ -725,3 +725,229 @@ export const scanlineEffect = defineEffect({
     },
   },
 })
+
+// ---------------------------------------------------------------------------
+// Mosaic — rounded tiles whose inset breathes with luminance; bright cells
+// fill their sprite, dark cells shrink to slivers.
+// ---------------------------------------------------------------------------
+
+const mosaicFragmentShader = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_texture;
+
+in vec2 v_sourceUv;
+in float v_luminance;
+in float v_sourceAlpha;
+in vec3 v_adjustedColor;
+out vec4 outColor;
+${colorModeShaderChunk}
+void main() {
+  vec2 c = gl_PointCoord - vec2(0.5);
+  // Tile half-extent grows with luminance; rounded corners via corner circle.
+  float extent = mix(0.1, 0.46, v_luminance);
+  vec2 q = abs(c) - vec2(extent - 0.1);
+  float dist = length(max(q, 0.0)) - 0.1;
+  float tile = 1.0 - smoothstep(-0.02, 0.03, dist);
+  float alpha = tile * v_sourceAlpha;
+  if (alpha < 0.01) discard;
+  outColor = vec4(resolveColor(v_adjustedColor) * alpha, alpha);
+}
+`
+
+export const mosaicEffect = defineEffect({
+  id: "mosaic",
+  geometry: { type: "particles" },
+  source: {
+    vertex: particleVertexShaderBase("", "u_spacing * u_pixelRatio"),
+    fragment: mosaicFragmentShader,
+  },
+  uniforms: {
+    spacing: { type: "float", default: 14, min: 6, max: 32 },
+    contrast: { type: "float", default: 1.1, min: 0, max: 3 },
+    ...adjustmentUniforms,
+    ...colorUniforms,
+    ...physicsUniforms,
+  },
+  presets: {
+    tiles: {
+      spacing: 14,
+      contrast: 1.15,
+      force: 14,
+      forceRadius: 0.09,
+      spring: 26,
+      damping: 0.92,
+      alphaThreshold: 0.04,
+      interactionStrength: 1,
+    },
+    "fine-grid": {
+      spacing: 9,
+      contrast: 1.2,
+      force: 16,
+      forceRadius: 0.08,
+      spring: 28,
+      damping: 0.91,
+      alphaThreshold: 0.04,
+      interactionStrength: 1,
+    },
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Rings — concentric circular strokes per cell; ring density follows tone,
+// like tree rings or engraved medallions.
+// ---------------------------------------------------------------------------
+
+const ringsFragmentShader = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_texture;
+
+in vec2 v_sourceUv;
+in float v_luminance;
+in float v_sourceAlpha;
+in vec3 v_adjustedColor;
+out vec4 outColor;
+${colorModeShaderChunk}
+void main() {
+  vec2 c = gl_PointCoord - vec2(0.5);
+  float radius = length(c);
+  if (radius > 0.5) discard;
+  // Ring count 1–4 by luminance; stroke from the fractional radial band.
+  float ringCount = 1.0 + floor(v_luminance * 3.999);
+  float band = fract(radius * ringCount * 2.0);
+  float stroke = 1.0 - smoothstep(0.28, 0.42, abs(band - 0.5));
+  // Outermost edge fades so rings sit inside their cell.
+  float edge = 1.0 - smoothstep(0.42, 0.5, radius);
+  float alpha = stroke * edge * v_sourceAlpha * smoothstep(0.02, 0.12, v_luminance);
+  if (alpha < 0.01) discard;
+  outColor = vec4(resolveColor(v_adjustedColor) * alpha, alpha);
+}
+`
+
+export const ringsEffect = defineEffect({
+  id: "rings",
+  geometry: { type: "particles" },
+  source: {
+    vertex: particleVertexShaderBase("", "u_spacing * u_pixelRatio"),
+    fragment: ringsFragmentShader,
+  },
+  uniforms: {
+    spacing: { type: "float", default: 16, min: 8, max: 36 },
+    contrast: { type: "float", default: 1.15, min: 0, max: 3 },
+    ...adjustmentUniforms,
+    ...colorUniforms,
+    ...physicsUniforms,
+  },
+  presets: {
+    engraving: {
+      spacing: 16,
+      contrast: 1.2,
+      force: 14,
+      forceRadius: 0.09,
+      spring: 24,
+      damping: 0.92,
+      alphaThreshold: 0.04,
+      interactionStrength: 1,
+    },
+    medallion: {
+      spacing: 24,
+      contrast: 1.25,
+      force: 12,
+      forceRadius: 0.11,
+      spring: 22,
+      damping: 0.93,
+      alphaThreshold: 0.04,
+      interactionStrength: 0.9,
+    },
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Contour — short line segments angled by local image gradient, like a
+// flow-field pen sketch. Angle comes from neighboring luminance samples.
+// ---------------------------------------------------------------------------
+
+const contourVertexShader = particleVertexShaderBase(
+  `uniform float u_angleRange;
+out float v_angle;`,
+  "u_spacing * 1.2 * u_pixelRatio",
+).replace(
+  "  gl_PointSize = max(1.0,",
+  `  // Local gradient via two extra taps; segment lies along the contour
+  // (perpendicular to the gradient), clamped to u_angleRange degrees.
+  float rightLum = dot(adjustColor(texture(u_texture, a_sourceUv + vec2(0.004, 0.0)).rgb), vec3(0.2126, 0.7152, 0.0722));
+  float upLum = dot(adjustColor(texture(u_texture, a_sourceUv + vec2(0.0, 0.004)).rgb), vec3(0.2126, 0.7152, 0.0722));
+  float rawAngle = atan(upLum - luminance, rightLum - luminance) + 1.5707963;
+  float range = radians(u_angleRange);
+  v_angle = clamp(rawAngle, -range, range);
+  gl_PointSize = max(1.0,`,
+)
+
+const contourFragmentShader = `#version 300 es
+precision highp float;
+
+uniform sampler2D u_texture;
+
+in vec2 v_sourceUv;
+in float v_luminance;
+in float v_sourceAlpha;
+in vec3 v_adjustedColor;
+in float v_angle;
+out vec4 outColor;
+${colorModeShaderChunk}
+void main() {
+  vec2 c = gl_PointCoord - vec2(0.5);
+  // Rotate the sprite frame by the contour angle, draw a horizontal stroke.
+  float s = sin(v_angle), co = cos(v_angle);
+  vec2 r = vec2(c.x * co - c.y * s, c.x * s + c.y * co);
+  float len = mix(0.12, 0.46, v_luminance);
+  float thickness = 0.07;
+  float stroke = (1.0 - smoothstep(thickness - 0.03, thickness + 0.03, abs(r.y)))
+    * (1.0 - smoothstep(len - 0.05, len, abs(r.x)));
+  float alpha = stroke * v_sourceAlpha * smoothstep(0.02, 0.1, v_luminance);
+  if (alpha < 0.01) discard;
+  outColor = vec4(resolveColor(v_adjustedColor) * alpha, alpha);
+}
+`
+
+export const contourEffect = defineEffect({
+  id: "contour",
+  geometry: { type: "particles" },
+  source: {
+    vertex: contourVertexShader,
+    fragment: contourFragmentShader,
+  },
+  uniforms: {
+    spacing: { type: "float", default: 10, min: 5, max: 24 },
+    contrast: { type: "float", default: 1.15, min: 0, max: 3 },
+    angleRange: { type: "float", default: 180, min: 15, max: 180 },
+    ...adjustmentUniforms,
+    ...colorUniforms,
+    ...physicsUniforms,
+  },
+  presets: {
+    sketch: {
+      spacing: 10,
+      contrast: 1.2,
+      angleRange: 180,
+      force: 14,
+      forceRadius: 0.09,
+      spring: 26,
+      damping: 0.92,
+      alphaThreshold: 0.04,
+      interactionStrength: 1,
+    },
+    "cross-hatch": {
+      spacing: 7,
+      contrast: 1.3,
+      angleRange: 60,
+      force: 16,
+      forceRadius: 0.08,
+      spring: 28,
+      damping: 0.91,
+      alphaThreshold: 0.04,
+      interactionStrength: 1,
+    },
+  },
+})

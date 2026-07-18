@@ -26,10 +26,21 @@ export interface AmbientMotion {
   scale: number
 }
 
+export type PointerMode = "repel" | "attract"
+
 export interface ParticleFieldStep {
   pointer: readonly [number, number]
   pointerVelocity?: readonly [number, number]
   pointerActive: boolean
+  /** repel (default) pushes particles away; attract pulls them in. */
+  pointerMode?: PointerMode
+  /** Additional simultaneous pointers (touch); each gets its own push zone. */
+  extraPointers?: readonly (readonly [number, number])[]
+  /**
+   * Page scroll velocity in viewport-heights/second. The whole field lags
+   * behind fast scrolling — a momentum smear that settles via the spring.
+   */
+  scrollVelocity?: number
   deltaTime: number
   aspectRatio: number
   force: number
@@ -200,28 +211,43 @@ export function stepParticleField(
       pointerVelocity[0] * step.aspectRatio,
       pointerVelocity[1],
     )
+    // Attract flips the radial sign: particles lean toward the cursor
+    // instead of fleeing. Sweep (velocity drag) keeps its direction.
+    const radialSign = step.pointerMode === "attract" ? -1 : 1
 
     if (step.pointerActive) {
-      const deltaX = (positionX - step.pointer[0]) * step.aspectRatio
-      const deltaY = positionY - step.pointer[1]
-      const distance = Math.hypot(deltaX, deltaY)
+      const pointers: (readonly [number, number])[] = [step.pointer]
+      if (step.extraPointers !== undefined) pointers.push(...step.extraPointers)
 
-      if (distance > 0 && distance < step.forceRadius) {
-        const falloff = 1 - distance / step.forceRadius
-        const shapedFalloff = falloff * falloff
-        // Constant radial pressure gives the small hover circle; cursor
-        // velocity adds a directional sweep so fast strokes feel fluid.
-        const radialAcceleration = step.force * shapedFalloff
-        const sweepScale = Math.min(pointerSpeed, 1.6) * 0.55
-        velocityX +=
-          ((deltaX / distance / step.aspectRatio) * radialAcceleration +
-            pointerVelocity[0] * step.force * shapedFalloff * sweepScale) *
-          deltaTime
-        velocityY +=
-          ((deltaY / distance) * radialAcceleration +
-            pointerVelocity[1] * step.force * shapedFalloff * sweepScale) *
-          deltaTime
+      for (const activePointer of pointers) {
+        const deltaX = (positionX - activePointer[0]) * step.aspectRatio
+        const deltaY = positionY - activePointer[1]
+        const distance = Math.hypot(deltaX, deltaY)
+
+        if (distance > 0 && distance < step.forceRadius) {
+          const falloff = 1 - distance / step.forceRadius
+          const shapedFalloff = falloff * falloff
+          // Constant radial pressure gives the small hover circle; cursor
+          // velocity adds a directional sweep so fast strokes feel fluid.
+          const radialAcceleration = step.force * shapedFalloff * radialSign
+          const sweepScale = Math.min(pointerSpeed, 1.6) * 0.55
+          velocityX +=
+            ((deltaX / distance / step.aspectRatio) * radialAcceleration +
+              pointerVelocity[0] * step.force * shapedFalloff * sweepScale) *
+            deltaTime
+          velocityY +=
+            ((deltaY / distance) * radialAcceleration +
+              pointerVelocity[1] * step.force * shapedFalloff * sweepScale) *
+            deltaTime
+        }
       }
+    }
+
+    if (step.scrollVelocity !== undefined && step.scrollVelocity !== 0) {
+      // Momentum smear: the field lags behind page motion. Clamped so wild
+      // scroll wheels can only stretch the field, never launch it.
+      const clamped = Math.max(-4, Math.min(4, step.scrollVelocity))
+      velocityY += clamped * 0.55 * deltaTime * 60 * deltaTime
     }
 
     const damping = Math.pow(step.damping, deltaTime * 60)

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import { ambientModes, effectCatalog } from "./effects.js"
 
 describe("effectCatalog", () => {
-  it("exposes all seven effect families", () => {
+  it("exposes all ten effect families", () => {
     expect(effectCatalog.map((entry) => entry.id)).toEqual([
       "particles",
       "dither",
@@ -11,6 +11,9 @@ describe("effectCatalog", () => {
       "led",
       "stitch",
       "scanline",
+      "mosaic",
+      "rings",
+      "contour",
     ])
   })
 

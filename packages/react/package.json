@@ -1,6 +1,6 @@
 {
   "name": "@dotmatter/react",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "React component for dotmatter \u2014 render any image or video as an interactive particle field: <DotMatter src={img} effect={ditherEffect} />.",
   "keywords": [
     "react",

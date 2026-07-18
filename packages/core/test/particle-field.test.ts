@@ -146,6 +146,26 @@ describe("stepParticleField", () => {
     expect(Math.abs(field.positions[0]! - 0.5)).toBeLessThan(0.005)
   })
 
+  it("pulls particles toward the pointer in attract mode", () => {
+    const field = oneParticle()
+
+    stepParticleField(field, {
+      pointer: [0.4, 0.5],
+      pointerVelocity: [0, 0],
+      pointerActive: true,
+      pointerMode: "attract",
+      deltaTime: 1 / 60,
+      aspectRatio: 1,
+      force: 18,
+      forceRadius: 0.2,
+      spring: 0,
+      damping: 1,
+    })
+
+    // Particle at 0.5 with pointer at 0.4 → attract moves it left (toward).
+    expect(field.positions[0]).toBeLessThan(0.5)
+  })
+
   it("pushes nearby particles in the direction of cursor movement", () => {
     const field = oneParticle()
 

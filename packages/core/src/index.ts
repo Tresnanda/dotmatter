@@ -23,6 +23,7 @@ export { createParticleField, stepParticleField } from "./particle-field.js"
 export type {
   AmbientMode,
   AmbientMotion,
+  PointerMode,
   ParticleFieldDimensions,
   ParticleFieldState,
   ParticleFieldStep,
