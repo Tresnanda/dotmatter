@@ -1,6 +1,26 @@
 {
   "name": "@dotmatter/shaders",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Effect library for dotmatter: particles, dither, halftone, ascii, led, stitch, and scanline \u2014 all on one shared particle simulation.",
+  "keywords": [
+    "shader",
+    "dither",
+    "halftone",
+    "ascii-art",
+    "particles",
+    "webgl",
+    "image-effects"
+  ],
+  "license": "MIT",
+  "author": "Treshnanda <treshnanda@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tresnanda/dotmatter.git"
+  },
+  "homepage": "https://github.com/Tresnanda/dotmatter#readme",
+  "bugs": {
+    "url": "https://github.com/Tresnanda/dotmatter/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -9,7 +29,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",

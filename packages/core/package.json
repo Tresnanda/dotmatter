@@ -1,6 +1,26 @@
 {
   "name": "@dotmatter/core",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "WebGL2 particle-physics engine for interactive image effects: cursor push, spring return, ambient motion, alpha-masked fields.",
+  "keywords": [
+    "webgl",
+    "webgl2",
+    "particles",
+    "physics",
+    "shader",
+    "image-effects",
+    "interactive"
+  ],
+  "license": "MIT",
+  "author": "Treshnanda <treshnanda@gmail.com>",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Tresnanda/dotmatter.git"
+  },
+  "homepage": "https://github.com/Tresnanda/dotmatter#readme",
+  "bugs": {
+    "url": "https://github.com/Tresnanda/dotmatter/issues"
+  },
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -9,7 +29,9 @@
       "import": "./dist/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run",

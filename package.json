@@ -6,6 +6,7 @@
   "packageManager": "pnpm@11.13.1",
   "scripts": {
     "build": "pnpm -r build",
+    "dev": "pnpm --filter @dotmatter/playground dev",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "pnpm --filter @dotmatter/core build && pnpm --filter @dotmatter/shaders build && pnpm --filter @dotmatter/react build && pnpm -r typecheck"
