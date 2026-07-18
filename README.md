@@ -8,8 +8,16 @@ Inspired by the interactive shader components popularized by Figma and Framer.
 
 ## Quick start
 
+Install with your package manager of choice — `@dotmatter/react` pulls in the engine and effects automatically:
+
 ```bash
-pnpm add @dotmatter/react @dotmatter/shaders @dotmatter/core
+npm install @dotmatter/react
+# or
+pnpm add @dotmatter/react
+# or
+yarn add @dotmatter/react
+# or
+bun add @dotmatter/react
 ```
 
 ```tsx
@@ -67,11 +75,26 @@ export const myEffect = defineEffect({
 })
 ```
 
+## Scroll reveal & particle text
+
+```tsx
+// Particles assemble into place as the element scrolls into view
+<DotMatter src={img} effect={particleEffect} scrollReveal="auto" alt="…" />
+
+// Headlines as interactive particle fields (accessible text stays in the DOM)
+import { DotMatterText } from "@dotmatter/react"
+<DotMatterText text="HELLO" effect={particleEffect} />
+```
+
+`prefers-reduced-motion` is respected automatically, and rendering pauses when the element is offscreen or the tab is hidden.
+
 ## Development
+
+This repo uses pnpm workspaces (contributors need [pnpm](https://pnpm.io)):
 
 ```bash
 pnpm install
-pnpm test        # 102 tests
+pnpm test        # full test suite
 pnpm dev         # playground at localhost:5173
 pnpm build
 ```

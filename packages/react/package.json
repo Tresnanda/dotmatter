@@ -1,6 +1,6 @@
 {
   "name": "@dotmatter/react",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "React component for dotmatter \u2014 render any image or video as an interactive particle field: <DotMatter src={img} effect={ditherEffect} />.",
   "keywords": [
     "react",
@@ -44,7 +44,7 @@
     "@dotmatter/shaders": "workspace:*"
   },
   "peerDependencies": {
-    "react": "19.2.7"
+    "react": ">=19"
   },
   "devDependencies": {
     "@types/jsdom": "28.0.3",
