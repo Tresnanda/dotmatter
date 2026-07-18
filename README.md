@@ -2,9 +2,11 @@
 
 Turn any image or video into an interactive field of physical particles.
 
-Seven effects — **Particles, Dither, Halftone, ASCII, LED, Stitch, Scanline** — all running on one shared WebGL2 particle simulation. Every dot, glyph, and cell is an independently simulated object with a home position, velocity, and spring: the cursor physically pushes them aside, they carry momentum, and they bounce back with a liquid overshoot.
+Ten effects — **Particles, Dither, Halftone, ASCII, LED, Stitch, Scanline, Mosaic, Rings, Contour** — all running on one shared WebGL2 particle simulation. Every dot, glyph, and cell is an independently simulated object with a home position, velocity, and spring: the cursor physically pushes them aside, they carry momentum, and they bounce back with a liquid overshoot.
 
 Inspired by the interactive shader components popularized by Figma and Framer.
+
+**Using an AI coding agent?** Point it at [`llms.txt`](./llms.txt) — a complete, standalone reference for the entire API written for LLMs. Once the playground is deployed it will also be served at `/llms.txt`.
 
 ## Quick start
 

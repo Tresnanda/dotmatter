@@ -1,0 +1,181 @@
+# dotmatter
+
+> Interactive particle-field image effects for React. dotmatter turns any image, video, canvas, or headline text into a field of physically simulated particles rendered with WebGL2. Every particle has a home position, velocity, and spring — the cursor pushes (or attracts) them and they bounce back with a fluid overshoot. Ten visual effects (dither, particles, halftone, ascii, led, stitch, scanline, mosaic, rings, contour) share the same physics. Everything renders locally in the browser; nothing is uploaded.
+
+This file is complete standalone documentation for AI agents. You do not need to fetch any other page to integrate dotmatter.
+
+- Package: `@dotmatter/react` on npm (current: 0.3.x). Peer dep: `react` >= 19. Automatically pulls in `@dotmatter/core` and `@dotmatter/shaders` — install only `@dotmatter/react`.
+- Repo: https://github.com/Tresnanda/dotmatter
+- License: MIT
+- Requires: WebGL2 (all modern browsers). No SSR rendering — the component renders an `<img>` fallback until it mounts, so it is safe in Next.js/Remix as long as it runs as a client component (`"use client"`).
+
+## Install
+
+```bash
+npm install @dotmatter/react
+# or: pnpm add / yarn add / bun add @dotmatter/react
+```
+
+## Quick start (copy this)
+
+```tsx
+"use client" // if using Next.js App Router
+
+import { DotMatter } from "@dotmatter/react"
+import { particleEffect } from "@dotmatter/shaders"
+
+export function Hero() {
+  return (
+    <DotMatter
+      src="/photo.jpg"
+      effect={particleEffect}
+      alt="A description of the image"
+      style={{ width: "100%", aspectRatio: "16 / 10" }}
+    />
+  )
+}
+```
+
+Critical layout rule: the component fills its own box. YOU must give it a size — set `width` + `aspect-ratio` (or explicit height) via `style` or `className`. A zero-height container renders nothing.
+
+## Components
+
+### `<DotMatter />` — the main component
+
+```tsx
+import { DotMatter } from "@dotmatter/react"
+```
+
+Props:
+- `src: string | HTMLCanvasElement` (required) — image URL, video URL (with `video`), or a canvas element used directly as the texture.
+- `effect: EffectDefinition` (required) — one of the ten effect objects imported from `@dotmatter/shaders` (see Effects below).
+- `alt: string` (required) — accessible description; the original `<img>` stays in the DOM as fallback.
+- `video?: boolean` — set true when `src` is a video URL. Renders a muted, looped, autoplaying `<video>` streamed to the GPU every frame.
+- `preset?: string` — named preset for the chosen effect (see Effects table).
+- `effectOptions?: Record<string, unknown>` — per-effect uniform overrides, plus universal options (see Options below). Live-updates without rebuilding.
+- `ambient?: AmbientMotion` — idle drift: `{ mode: "wave" | "breathe" | "flow" | "jitter", strength?: number, speed?: number, scale?: number }`. Strength ~0.3–1.0 is tasteful. Omit for a still field.
+- `pointerMode?: "repel" | "attract"` — default `"repel"`. Attract pulls particles toward the cursor instead.
+- `scrollReveal?: "auto" | number` — scroll-driven assembly. `"auto"`: particles start scattered and condense into the image as the element scrolls into view (fully interruptible, reverses on scroll-up). A number 0–1 drives progress manually (0 = scattered, 1 = assembled).
+- `reduceMotion?: boolean` — gentle mode: no ambient drift, no reveal scatter, calmer springs. Defaults to the user's `prefers-reduced-motion` setting; only pass this to override.
+- `controls?: (c: { capture(): string } | null) => void` — receives imperative controls once live. `capture()` returns the current frame as a PNG data URL.
+- `onError?: (error: Error & { code?: string }) => void` — e.g. WebGL2 unavailable. The plain `<img>`/`<video>` remains visible on failure, so failure is graceful by default.
+- `className?`, `style?` — applied to the wrapper `<span>` (display: block). Note the wrapper sets `touch-action: none` so touch drags drive the field; override via `style` if you need touch scrolling over it.
+
+### Flagship shorthands (no `effect` prop needed)
+
+```tsx
+import { DitherImage, ParticleImage, HalftoneImage } from "@dotmatter/react"
+<ParticleImage src="/photo.jpg" alt="..." />
+```
+
+Same props as `DotMatter` minus `effect`.
+
+### `<DotMatterText />` — headlines as particle fields
+
+```tsx
+import { DotMatterText } from "@dotmatter/react"
+import { particleEffect } from "@dotmatter/shaders"
+
+<DotMatterText
+  text="HELLO"
+  effect={particleEffect}
+  font="700 200px system-ui, sans-serif" // optional, this is the default
+  style={{ width: "100%", aspectRatio: "3.2" }}
+/>
+```
+
+Rasterizes the text to an offscreen canvas and feeds it through the same pipeline. Particles are allocated only inside the glyphs (alpha masking). The real text stays in the DOM, visually hidden, for screen readers and SEO. Accepts `effect`, `preset`, `effectOptions`, `ambient`, `pointerMode`, `scrollReveal`, `reduceMotion`, `controls`, `fill` (text color used for luminance sampling, default white).
+
+## Effects
+
+Import from `@dotmatter/shaders`. Every effect is the same particle simulation with a different way of drawing each particle.
+
+| Import | id | Look | Presets |
+| --- | --- | --- | --- |
+| `particleEffect` | `particles` | Soft luminance-sized dots (the signature look) | `soft-repel`, `dense-field` |
+| `ditherEffect` | `dither` | Bayer-matrix 1-bit dither tiles, two-ink palette | `editorial`, `terminal` |
+| `halftoneEffect` | `halftone` | Print-style halftone dots (RGB separation in source mode) | `mono-newsprint`, `cmyk-print` |
+| `asciiEffect` | `ascii` | Procedural glyph ramp, terminal green by default | `terminal`, `typewriter` |
+| `ledEffect` | `led` | Glowing LED pixels | `stadium`, `soft-billboard` |
+| `stitchEffect` | `stitch` | Cross-stitch X marks | `embroidery`, `fine-thread` |
+| `scanlineEffect` | `scanline` | Horizontal CRT bars | `crt`, `receipt` |
+| `mosaicEffect` | `mosaic` | Rounded mosaic tiles | `tiles`, `fine-grid` |
+| `ringsEffect` | `rings` | Concentric engraved rings | `engraving`, `medallion` |
+| `contourEffect` | `contour` | Gradient-following strokes, sketch-like | `sketch`, `cross-hatch` |
+
+## effectOptions
+
+All numeric options live-update. Changing `spacing` rebuilds the particle grid (still cheap).
+
+Universal (every effect):
+- `spacing` — px between particles at DPR 1. Lower = denser = more particles. Typical 5–16.
+- `contrast` (0–3, default ~1), `hue` (-180–180 degrees), `saturation` (0–2), `exposure` (-2–2) — image adjustments applied on the GPU.
+- `colorMode` — `0` = colors sampled from the source image, `1` = flat tint. Each effect has a sensible default.
+- `tint` — hex color string, used when `colorMode: 1` (dither uses `colorDark`/`colorLight` two-ink palette instead).
+- Physics: `force` (push strength, default 16), `forceRadius` (cursor influence radius in normalized units, default ~0.085 — small and precise), `spring` (return stiffness, default 26), `damping` (default 0.92; lower = bouncier).
+- `alphaThreshold` — for transparent PNGs: particles are only created where source alpha exceeds this, so a cut-out subject becomes its own interactive silhouette.
+
+Per-effect extras (main ones): dither `scale` + `threshold` + `colorDark`/`colorLight`; halftone dot behavior via `spacing`/`contrast`; led `glow` (0–2).
+
+Example — tinted, denser, bouncier:
+
+```tsx
+<DotMatter
+  src="/logo.png"
+  effect={particleEffect}
+  alt="Logo"
+  effectOptions={{
+    spacing: 8,
+    colorMode: 1,
+    tint: "#d8ff36",
+    force: 22,
+    damping: 0.88,
+  }}
+/>
+```
+
+## Recipes
+
+Scroll-reveal hero (particles assemble as the section scrolls in):
+
+```tsx
+<DotMatter src="/hero.jpg" effect={halftoneEffect} alt="Hero" scrollReveal="auto"
+  style={{ width: "100%", aspectRatio: "16/9" }} />
+```
+
+Video source:
+
+```tsx
+<DotMatter src="/clip.mp4" video effect={ledEffect} alt="Showreel"
+  style={{ width: "100%", aspectRatio: "16/9" }} />
+```
+
+Transparent-PNG silhouette that attracts particles to the cursor:
+
+```tsx
+<DotMatter src="/cutout.png" effect={particleEffect} alt="Product"
+  pointerMode="attract" effectOptions={{ alphaThreshold: 0.5 }}
+  style={{ width: 480, aspectRatio: "1" }} />
+```
+
+PNG export button:
+
+```tsx
+const ref = useRef<{ capture(): string } | null>(null)
+<DotMatter src="/a.jpg" effect={ditherEffect} alt="A" controls={(c) => (ref.current = c)} />
+<button onClick={() => { const url = ref.current?.capture(); /* download url */ }}>Save PNG</button>
+```
+
+## Custom effects (advanced)
+
+`@dotmatter/core` exports `defineEffect` for writing your own particle skin: provide `id`, `geometry: { type: "particles" }`, GLSL vertex/fragment shaders, `uniforms` (with defaults/min/max), and optional `presets`. Study any effect in the `@dotmatter/shaders` source as a template — they are all built on the public API. Core also exports the renderer (`createShaderImageRenderer`) for non-React use: methods `render(frame)`, `resize`, `setSource`, `updateEffectOptions`, `setAmbient`, `setReveal`, `setPointerMode`, `capture`, `destroy`.
+
+## Gotchas for agents
+
+1. Always size the component (`width` + `aspect-ratio`); it cannot infer a height from the container alone.
+2. It's a client component — add `"use client"` in Next.js App Router files that use it.
+3. `alt` is required on `DotMatter`; keep it meaningful (the fallback `<img>` uses it).
+4. Cross-origin images need CORS headers (`crossorigin`-clean sources) or the WebGL texture upload fails — same-origin or properly-CORS'd URLs only.
+5. `touch-action: none` is set on the wrapper: on mobile, touching the canvas moves particles instead of scrolling. If the element is large on mobile, pass `style={{ touchAction: "pan-y" }}` to keep page scrolling.
+6. Don't recreate `effect`/`effectOptions` objects every render for no reason — `effectOptions` is diffed live, but the `effect` object identity triggers a full renderer rebuild. Import effects at module scope.
+7. Reduced motion is automatic; do not build your own `prefers-reduced-motion` wrapper around it.
