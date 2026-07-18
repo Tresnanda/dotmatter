@@ -113,6 +113,13 @@ a { color: inherit; }
 .ghost-button:hover { color: var(--fg); background: oklch(1 0 0 / 0.06); }
 .ghost-button:active { transform: scale(0.96); }
 
+.github-button {
+  gap: 8px;
+  color: var(--fg);
+  background: oklch(1 0 0 / 0.07);
+}
+.github-button:hover { background: oklch(1 0 0 / 0.12); }
+
 .text-button {
   padding: 8px 0;
   border: 0;
