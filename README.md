@@ -33,10 +33,22 @@ import { particleEffect } from "@dotmatter/shaders"
   effect={particleEffect}
   preset="soft-repel"
   alt="Portrait"
+  style={{ width: "100%", aspectRatio: "3 / 4" }}
 />
 ```
 
 That's it. The component renders an accessible `<img>` fallback, streams the image to the GPU, and animates the particle field at 60fps. Move the cursor across it.
+
+> **Give it a size.** dotmatter fills its own box — always set `width` + `aspect-ratio` (or an explicit height) via `style`/`className`. A zero-height container renders nothing.
+
+### Not showing? Check these first
+
+1. **No height** — see above. If it's in a flex/grid cell, that cell can collapse it to `0`; give it a size or `flex: 1` + a `min-height`.
+2. **Next.js / RSC** — the file must be a Client Component. Put `"use client"` at the top. In a Server Component the effect never runs, so you only get the static fallback image (no particles).
+3. **Cross-origin images** — the image is uploaded to a WebGL texture, so it must be same-origin or served with `Access-Control-Allow-Origin`. A hotlinked image with no CORS headers taints the canvas and the effect fails (fallback `<img>` still shows).
+4. **WebGL2 off** — rare; `onError` fires and the plain `<img>` stays visible, so the page degrades gracefully.
+
+Full agent-oriented reference: [dotmatter.treshnanda.tech/llms.txt](https://dotmatter.treshnanda.tech/llms.txt).
 
 ## Effects
 
@@ -49,6 +61,9 @@ That's it. The component renders an accessible `<img>` fallback, streams the ima
 | LED | `ledEffect` | Glowing matrix pixels |
 | Stitch | `stitchEffect` | Cross-stitch X marks |
 | Scanline | `scanlineEffect` | Bar segments, CRT feel |
+| Mosaic | `mosaicEffect` | Rounded mosaic tiles |
+| Rings | `ringsEffect` | Concentric engraved rings |
+| Contour | `contourEffect` | Gradient-following strokes, sketch-like |
 
 ## Features
 

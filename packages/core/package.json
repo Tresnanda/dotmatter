@@ -1,6 +1,6 @@
 {
   "name": "@dotmatter/core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "WebGL2 particle-physics engine for interactive image effects: cursor push, spring return, ambient motion, alpha-masked fields.",
   "keywords": [
     "webgl",

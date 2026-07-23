@@ -1,6 +1,6 @@
 {
   "name": "@dotmatter/shaders",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Effect library for dotmatter: particles, dither, halftone, ascii, led, stitch, and scanline \u2014 all on one shared particle simulation.",
   "keywords": [
     "shader",

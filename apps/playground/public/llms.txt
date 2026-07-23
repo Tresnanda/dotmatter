@@ -4,7 +4,7 @@
 
 This file is complete standalone documentation for AI agents. You do not need to fetch any other page to integrate dotmatter.
 
-- Package: `@dotmatter/react` on npm (current: 0.3.x). Peer dep: `react` >= 19. Automatically pulls in `@dotmatter/core` and `@dotmatter/shaders` — install only `@dotmatter/react`.
+- Package: `@dotmatter/react` on npm (current: 0.3.1). Peer dep: `react` >= 19. Automatically pulls in `@dotmatter/core` and `@dotmatter/shaders` — install only `@dotmatter/react`.
 - Repo: https://github.com/Tresnanda/dotmatter
 - License: MIT
 - Requires: WebGL2 (all modern browsers). No SSR rendering — the component renders an `<img>` fallback until it mounts, so it is safe in Next.js/Remix as long as it runs as a client component (`"use client"`).
@@ -37,6 +37,24 @@ export function Hero() {
 ```
 
 Critical layout rule: the component fills its own box. YOU must give it a size — set `width` + `aspect-ratio` (or explicit height) via `style` or `className`. A zero-height container renders nothing.
+
+## If it's not showing (read this FIRST when integrating)
+
+Ranked by how often each one is the culprit:
+
+1. NO SIZE / ZERO HEIGHT — the most common cause of a blank result. The component has no intrinsic size of its own beyond what its source gives it. ALWAYS set an explicit size on the component:
+   `<DotMatter ... style={{ width: "100%", aspectRatio: "16 / 10" }} />`
+   For image/video sources it can borrow the media's aspect ratio, but being explicit is bulletproof. For `DotMatterText` and canvas sources, a size is effectively required. If you drop it into a flex or grid cell, that cell can collapse it to 0 — give it a width/height or `flex: 1` + a min-height.
+
+2. NEXT.JS / RSC — the file must be a Client Component. Add `"use client"` at the very top of the file that renders `<DotMatter>`. In a Server Component the effect never runs, so you get the static fallback image and no particles (looks "dead"). If you only ever see the plain image, this is very likely why.
+
+3. CROSS-ORIGIN IMAGES (blank canvas / console CORS error) — the image is uploaded to a WebGL texture, so it must be same-origin OR served with `Access-Control-Allow-Origin`. A hotlinked image from another domain without CORS headers taints the canvas and the effect fails (the fallback `<img>` still shows). Host the image yourself or use a CORS-enabled CDN.
+
+4. WEBGL2 UNAVAILABLE — rare, but on very old browsers or locked-down environments WebGL2 may be off. `onError` fires and the plain `<img>`/`<video>` stays visible, so it degrades gracefully rather than breaking the page. Pass `onError` to log it if you need to know.
+
+If you still only see a static image (no motion): it's almost always #1 (no height, so the canvas has 0 pixels to draw into) or #2 (`"use client"` missing). Check those two before anything else.
+
+(Note: dotmatter >= 0.3.1 fixes a bug where cached/preloaded images sometimes never initialized the effect. If you were on an earlier version and the effect was intermittent on repeat visits, upgrade.)
 
 ## Components
 

@@ -109,6 +109,18 @@ export function DotMatter({
 
   const canvasSource = typeof src === "string" ? null : src
 
+  // Cached images are already `complete` before React attaches onLoad, so the
+  // load event never fires and the renderer would never start — the #1 reason
+  // the effect silently fails on production (repeat visits, fast CDNs,
+  // preloaded/priority images). Detect the already-loaded case and kick it off.
+  useEffect(() => {
+    if (canvasSource !== null || video) return
+    const image = imageRef.current
+    if (image !== null && image.complete && image.naturalWidth > 0) {
+      setSourceRevision((revision) => revision + 1)
+    }
+  }, [src, canvasSource, video])
+
   useEffect(() => {
     const container = containerRef.current
     const image = canvasSource ?? (video ? videoRef.current : imageRef.current)
@@ -315,6 +327,13 @@ export function DotMatter({
         // page while a finger is on the canvas. Override via style if the
         // element should scroll normally on touch.
         touchAction: "none",
+        // Image/video sources give the wrapper height via the in-flow media
+        // element. Canvas sources (incl. DotMatterText) have no in-flow child,
+        // so the wrapper would collapse to 0 and render nothing — derive an
+        // intrinsic aspect ratio from the canvas. User `style` still wins.
+        ...(canvasSource !== null && canvasSource.height > 0
+          ? { width: "100%", aspectRatio: `${canvasSource.width} / ${canvasSource.height}` }
+          : {}),
         ...style,
       }}
     >
